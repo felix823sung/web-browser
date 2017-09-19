@@ -21,8 +21,9 @@ class App(QFrame):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Web Browser")
-        self.CreateApp()
         self.setBaseSize(1366, 768)
+        self.setMinimumSize(1366, 768)
+        self.CreateApp()
 
 
     def CreateApp(self):
@@ -34,8 +35,8 @@ class App(QFrame):
         self.tabbar = QTabBar(movable=True, tabsClosable=True)
         self.tabbar.tabCloseRequested.connect(self.CloseTab)
         self.tabbar.tabBarClicked.connect(self.SwitchTab)
-
         self.tabbar.setCurrentIndex(0)
+        self.tabbar.setDrawBase(False)
 
         # Keep track of tabs
         self.tabCount = 0
@@ -48,7 +49,20 @@ class App(QFrame):
 
         self.addressbar.returnPressed.connect(self.BrowseTo)
 
+        # Set Toolbar buttons
+        self.BackButton = QPushButton("<")
+        self.BackButton.clicked.connect(self.GoBack)
+
+        self.ForwardButton = QPushButton(">")
+        self.ForwardButton.clicked.connect(self.GoForward)
+
+        self.ReloadButton = QPushButton("R")
+        self.ReloadButton.clicked.connect(self.ReloadPage)
+
         self.Toolbar.setLayout(self.ToolbarLayout)
+        self.ToolbarLayout.addWidget(self.BackButton)
+        self.ToolbarLayout.addWidget(self.ForwardButton)
+        self.ToolbarLayout.addWidget(self.ReloadButton)
         self.ToolbarLayout.addWidget(self.addressbar)
 
         # New tab button
@@ -80,13 +94,17 @@ class App(QFrame):
 
         self.tabs.append(QWidget())
         self.tabs[i].layout = QVBoxLayout()
+        self.tabs[i].layout.setContentsMargins(0,0,0,0)
+
+
         self.tabs[i].setObjectName("tab" + str(i))
 
         # Open webview
         self.tabs[i].content = QWebEngineView()
         self.tabs[i].content.load(QUrl.fromUserInput("http://google.ca"))
 
-        self.tabs[i].content.titleChanged.connect(lambda: self.SetTabText(i))
+        self.tabs[i].content.titleChanged.connect(lambda: self.SetTabContent(i, "title"))
+        self.tabs[i].content.iconChanged.connect(lambda: self.SetTabContent(i, "icon"))
 
         # Add webview to tabs layout
         self.tabs[i].layout.addWidget(self.tabs[i].content)
@@ -131,7 +149,7 @@ class App(QFrame):
 
         wv.load(QUrl.fromUserInput(url))
 
-    def SetTabText(self, i):
+    def SetTabContent(self, i, type):
         '''
             self.tabs[i].objectName = tab1
             self.tabbar.tabData(i)["object"] = tab1
@@ -149,12 +167,36 @@ class App(QFrame):
                 running = False
 
             if tab_name == tab_data_name["object"]:
-                newTitle = self.findChild(QWidget, tab_name).content.title()
-                self.tabbar.setTabText(count, newTitle)
+                if type == "title":
+                    newTitle = self.findChild(QWidget, tab_name).content.title()
+                    self.tabbar.setTabText(count, newTitle)
+                elif type == "icon":
+                    newIcon = self.findChild(QWidget, tab_name).content.icon()
+                    self.tabbar.setTabIcon(count, newIcon)
                 running = False
             else:
                 count += 1
 
+    def GoBack(self):
+        activeIndex = self.tabbar.currentIndex()
+        tab_name = self.tabbar.tabData(activeIndex)["object"]
+        tab_content = self.findChild(QWidget, tab_name).content
+
+        tab_content.back()
+
+    def GoForward(self):
+        activeIndex = self.tabbar.currentIndex()
+        tab_name = self.tabbar.tabData(activeIndex)["object"]
+        tab_content = self.findChild(QWidget, tab_name).content
+
+        tab_content.forward()
+
+    def ReloadPage(self):
+        activeIndex = self.tabbar.currentIndex()
+        tab_name = self.tabbar.tabData(activeIndex)["object"]
+        tab_content = self.findChild(QWidget, tab_name).content
+
+        tab_content.reload()
 
 
 
